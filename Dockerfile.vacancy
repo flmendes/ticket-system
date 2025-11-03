@@ -1,12 +1,13 @@
 # Ultra-optimized multi-stage build with distroless
-FROM python:3.11-alpine AS builder
+FROM python:3.11-slim-bookworm AS builder
 
 # Install build dependencies and uv
-RUN apk add --no-cache --virtual .build-deps \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    musl-dev \
-    libffi-dev \
-    && pip install --no-cache-dir uv
+    libc6-dev \
+    && pip install --no-cache-dir uv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -21,14 +22,14 @@ RUN uv sync --frozen --no-dev
 FROM gcr.io/distroless/python3-debian12:nonroot AS runtime
 
 # Copy virtual environment from builder stage
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=nonroot:nonroot /app/.venv /app/.venv
 
 # Copy source code
-COPY src/ /app/src/
-COPY scripts/ /app/scripts/
+COPY --chown=nonroot:nonroot src/ /app/src/
+COPY --chown=nonroot:nonroot scripts/ /app/scripts/
 
 # Set Python path and working directory
-ENV PYTHONPATH="/app:/app/.venv/lib/python3.11/site-packages" \
+ENV PYTHONPATH="/app/src:/app:/app/.venv/lib/python3.11/site-packages" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONOPTIMIZE=2

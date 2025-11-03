@@ -43,7 +43,7 @@ USER appuser
 
 # Set Python path and optimization flags
 ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH="/app" \
+    PYTHONPATH="/app/src:/app" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONOPTIMIZE=2
