@@ -15,6 +15,7 @@ wheels/
 # Performance test results (JSON files are large)
 performance-results*.json
 performance-baseline*.json
+docs/performance/results/
 
 # Keep these performance files:
 # - performance-baseline-v*.txt (human readable)
