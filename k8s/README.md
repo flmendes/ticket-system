@@ -42,6 +42,7 @@ kubectl wait --namespace ingress-nginx \
 # Apply manifests in order
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/redis-deployment.yaml
 kubectl apply -f k8s/vacancy-deployment.yaml
 kubectl apply -f k8s/ticket-deployment.yaml
 kubectl apply -f k8s/ingress.yaml
@@ -52,6 +53,10 @@ kubectl apply -f k8s/ingress.yaml
 ```bash
 # Check all resources
 kubectl get all -n ticket-system
+
+# Check Redis
+kubectl get pods -n ticket-system -l app=redis
+kubectl logs -n ticket-system deployment/redis
 
 # Check ingress
 kubectl get ingress -n ticket-system
@@ -94,9 +99,18 @@ Cria o namespace `ticket-system` para isolar os recursos.
 ConfigMap com todas as variáveis de ambiente:
 - Deployment mode: microservices
 - Service ports: 8001 (vacancy), 8002 (ticket)
+- Redis configuration: host, port, connection settings
 - Stock configuration: 10000 initial tickets
 - HTTP client settings
 - Logging configuration
+
+### `redis-deployment.yaml`
+Redis database para distributed locking e gerenciamento de estoque:
+- Redis 7-alpine para otimização
+- Persistent volume para dados
+- Health checks configurados
+- Resources limits definidos
+- Service ClusterIP para comunicação interna
 
 ### `vacancy-deployment.yaml`
 - **Deployment**: 2 replicas

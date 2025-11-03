@@ -29,6 +29,17 @@ data:
   INITIAL_STOCK: "10000"
   CACHE_TTL_SECONDS: "1"
 
+  # Redis Configuration
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_MAX_CONNECTIONS: "20"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  REDIS_SOCKET_KEEPALIVE_OPTIONS: "{}"
+  REDIS_HEALTH_CHECK_INTERVAL: "30"
+
+  REDIS_URL: "redis://redis:6379/0"
+
   # Logging
   LOG_LEVEL: "INFO"
   JSON_LOGS: "true"

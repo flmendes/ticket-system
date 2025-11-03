@@ -106,7 +106,7 @@ check-registry: ## Check if registry is accessible
 		(echo "$(RED)❌ Registry not accessible at $(REGISTRY)$(NC)" && exit 1)
 
 .PHONY: deploy
-deploy: deploy-namespace deploy-configmap deploy-services deploy-ingress deploy-hpa ## Deploy to Kubernetes
+deploy: deploy-namespace deploy-configmap deploy-redis deploy-services deploy-ingress deploy-hpa ## Deploy to Kubernetes
 
 .PHONY: deploy-namespace
 deploy-namespace: ## Create namespace
@@ -119,6 +119,12 @@ deploy-configmap: ## Deploy ConfigMap
 	@echo "$(YELLOW)⚙️  Deploying ConfigMap...$(NC)"
 	kubectl apply -f k8s/configmap.yaml
 	@echo "$(GREEN)✅ ConfigMap deployed$(NC)"
+
+.PHONY: deploy-redis
+deploy-redis: ## Deploy Redis database
+	@echo "$(YELLOW)🗄️  Deploying Redis...$(NC)"
+	kubectl apply -f k8s/redis-deployment.yaml
+	@echo "$(GREEN)✅ Redis deployed$(NC)"
 
 .PHONY: deploy-services
 deploy-services: ## Deploy microservices
@@ -182,11 +188,18 @@ status: ## Show deployment status
 logs: ## Show logs from all services
 	@echo "$(YELLOW)📋 Recent logs:$(NC)"
 	@echo ""
+	@echo "$(GREEN)=== Redis ===$(NC)"
+	@kubectl logs -n $(NAMESPACE) -l app=redis --tail=20
+	@echo ""
 	@echo "$(GREEN)=== Vacancy Service ===$(NC)"
 	@kubectl logs -n $(NAMESPACE) -l app=vacancy-service --tail=20
 	@echo ""
 	@echo "$(GREEN)=== Ticket Service ===$(NC)"
 	@kubectl logs -n $(NAMESPACE) -l app=ticket-service --tail=20
+
+.PHONY: logs-redis
+logs-redis: ## Show Redis logs
+	@kubectl logs -n $(NAMESPACE) -l app=redis -f
 
 .PHONY: logs-vacancy
 logs-vacancy: ## Show vacancy service logs
@@ -214,16 +227,33 @@ scale: ## Scale deployments (usage: make scale REPLICAS=3)
 test: ## Test the deployment
 	@echo "$(YELLOW)🧪 Testing deployment...$(NC)"
 	@echo ""
-	@echo "$(GREEN)1. Health Check:$(NC)"
+	@echo "$(GREEN)1. Redis Connection:$(NC)"
+	@kubectl exec -n $(NAMESPACE) deployment/redis -- redis-cli ping
+	@echo ""
+	@echo "$(GREEN)2. Health Check:$(NC)"
 	@curl -s http://ticket.127.0.0.1.nip.io/api/v1/health | jq .
 	@echo ""
-	@echo "$(GREEN)2. Service Info:$(NC)"
+	@echo "$(GREEN)3. Service Info:$(NC)"
 	@curl -s http://ticket.127.0.0.1.nip.io/ | jq .
 	@echo ""
 	@echo "$(GREEN)3. Purchase Test:$(NC)"
 	@curl -s -X POST http://ticket.127.0.0.1.nip.io/api/v1/purchase \
 		-H "Content-Type: application/json" \
 		-d '{"qty": 1}' | jq .
+
+.PHONY: test-redis
+test-redis: ## Test Redis connectivity and data
+	@echo "$(YELLOW)🗄️  Testing Redis...$(NC)"
+	@echo ""
+	@echo "$(GREEN)1. Redis Ping:$(NC)"
+	@kubectl exec -n $(NAMESPACE) deployment/redis -- redis-cli ping
+	@echo ""
+	@echo "$(GREEN)2. Redis Info:$(NC)"
+	@kubectl exec -n $(NAMESPACE) deployment/redis -- redis-cli info server | head -10
+	@echo ""
+	@echo "$(GREEN)3. Redis Keys:$(NC)"
+	@kubectl exec -n $(NAMESPACE) deployment/redis -- redis-cli keys "*" | head -10 || echo "No keys found"
+	@echo ""
 
 .PHONY: load-test
 load-test: ## Run K6 load test
@@ -236,6 +266,7 @@ clean: ## Delete all Kubernetes resources
 	kubectl delete -f k8s/ingress.yaml --ignore-not-found=true
 	kubectl delete -f k8s/ticket-deployment-registry.yaml --ignore-not-found=true
 	kubectl delete -f k8s/vacancy-deployment-registry.yaml --ignore-not-found=true
+	kubectl delete -f k8s/redis-deployment.yaml --ignore-not-found=true
 	kubectl delete -f k8s/configmap.yaml --ignore-not-found=true
 	kubectl delete -f k8s/namespace.yaml --ignore-not-found=true
 	@echo "$(GREEN)✅ Resources deleted$(NC)"

@@ -1,7 +1,10 @@
 """API routes for vacancy service."""
 from fastapi import APIRouter, HTTPException, Depends
+
+# For standalone execution without relative imports
 from common.models import ReserveRequest, ReserveResponse, AvailableResponse, HealthResponse
 from common.logging import setup_logging
+
 from .services import VacancyService
 from .dependencies import get_vacancy_service
 
@@ -69,10 +72,39 @@ async def get_available(
     summary="Health check",
     description="Check if the vacancy service is healthy and operational",
 )
-async def health_check() -> HealthResponse:
+async def health_check(
+    service: VacancyService = Depends(get_vacancy_service),
+) -> HealthResponse:
     """
     Health check endpoint.
 
     Used by Docker, Kubernetes, and load balancers to verify service health.
+    Returns detailed health information including stock manager status.
     """
-    return HealthResponse(status="healthy", service="vacancy")
+    try:
+        health_status = await service.health_check()
+        backend = health_status.get("backend", "unknown")
+        current_stock = health_status.get("current_stock", 0)
+        
+        # Detailed health info including Redis connectivity
+        details = {
+            "backend": backend,
+            "current_stock": current_stock,
+            "using_redis": backend == "redis"
+        }
+        
+        if "redis_status" in health_status:
+            details["redis_status"] = health_status["redis_status"]
+        
+        return HealthResponse(
+            status=health_status.get("status", "healthy"), 
+            service="vacancy",
+            details=details
+        )
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return HealthResponse(
+            status="unhealthy", 
+            service="vacancy",
+            details={"error": str(e)}
+        )

@@ -1,4 +1,21 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - ticket-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   vacancy-service:
     build:
       context: .
@@ -9,6 +26,10 @@ services:
     environment:
       - INITIAL_STOCK=10000
       - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - ticket-network
     ulimits:
@@ -20,7 +41,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 10s
 
   ticket-service:
     build:
@@ -52,3 +73,6 @@ services:
 networks:
   ticket-network:
     driver: bridge
+
+volumes:
+  redis-data:

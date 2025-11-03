@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     initial_stock: int = 1000
     cache_ttl_seconds: int = 1
 
+    # Redis configuration
+    redis_url: str = "redis://localhost:6379"
+    redis_db: int = 0
+    redis_max_connections: int = 10
+    redis_timeout: float = 5.0
+    redis_stock_key: str = "ticket_system:stock"
+    redis_lock_timeout: float = 10.0
+
     # Logging
     log_level: str = "INFO"
     json_logs: bool = False
