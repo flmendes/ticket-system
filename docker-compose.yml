@@ -1,0 +1,54 @@
+services:
+  vacancy-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.vacancy
+    container_name: vacancy-service
+    ports:
+      - "8001:8001"
+    environment:
+      - INITIAL_STOCK=10000
+      - LOG_LEVEL=INFO
+    networks:
+      - ticket-network
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  ticket-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ticket
+    container_name: ticket-service
+    ports:
+      - "8002:8002"
+    environment:
+      - VACANCY_URL=http://vacancy-service:8001
+      - VACANCY_TIMEOUT=2.0
+      - LOG_LEVEL=INFO
+    depends_on:
+      vacancy-service:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  ticket-network:
+    driver: bridge

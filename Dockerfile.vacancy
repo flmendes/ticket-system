@@ -1,0 +1,43 @@
+# Ultra-optimized multi-stage build with distroless
+FROM python:3.11-alpine AS builder
+
+# Install build dependencies and uv
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    && pip install --no-cache-dir uv
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies to /app/.venv
+RUN uv sync --frozen --no-dev
+
+# Production stage with distroless
+FROM gcr.io/distroless/python3-debian12:nonroot AS runtime
+
+# Copy virtual environment from builder stage
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy source code
+COPY src/ /app/src/
+COPY scripts/ /app/scripts/
+
+# Set Python path and working directory
+ENV PYTHONPATH="/app:/app/.venv/lib/python3.11/site-packages" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=2
+
+# Change to /app directory
+WORKDIR /app
+
+# Expose port
+EXPOSE 8001
+
+# Run the vacancy service
+ENTRYPOINT ["python3", "scripts/run_vacancy.py"]

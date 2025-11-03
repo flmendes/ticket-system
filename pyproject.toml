@@ -1,0 +1,17 @@
+[project]
+name = "ticket-system"
+version = "1.0.0"
+description = "Microservices ticket reservation system with FastAPI"
+authors = [{name = "Flavio Mendes", email = "flmendes@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.11.5"
+dependencies = [
+    "fastapi>=0.120.4",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.3",
+    "pydantic-settings>=2.0.0",
+    "uvicorn>=0.38.0",
+]
+
+[tool.uv]
+package = true

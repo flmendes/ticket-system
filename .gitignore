@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment files
+.env
+
+# Performance test results (JSON files are large)
+performance-results*.json
+performance-baseline*.json
+
+# Keep these performance files:
+# - performance-baseline-v*.txt (human readable)
+# - PERFORMANCE_*.md (documentation)

@@ -1,0 +1,55 @@
+# Multi-stage build for optimized Python microservice
+FROM python:3.11-alpine AS builder
+
+# Install build dependencies and uv
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    && pip install --no-cache-dir uv
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies to /app/.venv
+RUN uv sync --frozen --no-dev
+
+# Production stage
+FROM python:3.11-alpine AS runtime
+
+# Install runtime dependencies only
+RUN apk add --no-cache \
+    && addgroup -g 1001 -S appgroup \
+    && adduser -u 1001 -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy source code
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Set Python path and optimization flags
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=2
+
+# Expose port
+EXPOSE 8001
+
+# Run the vacancy service
+CMD ["python", "scripts/run_vacancy.py"]

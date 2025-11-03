@@ -1,0 +1,1 @@
+"""Ticket service - purchase orchestration."""
